@@ -42,7 +42,6 @@ read_gmt <- function(x) {
 }
 
 pathway_list <- scan(list_path, what = character(), sep = "\n")
-print(pathway_list)
 pathway_gene <- list()
 
 gmt_status <- argvs$GMT
@@ -71,8 +70,6 @@ if (is.null(gmt_status)) {
 
 stopifnot(length(pathway_gene) >= 3)
 pathway_list2 <- names(pathway_gene)
-print(pathway_list)
-print(pathway_list2)
 nums <- length(pathway_list2)
 overlap_count <- c()
 overlap_percent <- c()
@@ -99,9 +96,12 @@ network_raw <- tibble(source = source_node, target = target_node, overlap = over
 network_pass <- filter(network_raw, percent_min >= min_percent)
 network_fail <- filter(network_raw, percent_min < min_percent)
 glimpse(network_pass)
-cat("\n")
-cat("移除以下占比过低条目：\n")
-print(network_fail)
+if (nrow(network_fail) >= 1) {
+  cat("\n")
+  cat("移除以下占比过低条目：\n")
+  print(network_fail)
+}
+
 
 node_attrs <- tibble("shared name" = pathway_list2, gene_count = sapply(pathway_gene, length)) %>% 
   filter(`shared name` %in% unique(x = c(network_pass$source, network_pass$target)))
