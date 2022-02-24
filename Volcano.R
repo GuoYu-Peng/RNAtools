@@ -1,9 +1,11 @@
-suppressPackageStartupMessages(library(tidyverse))
 suppressPackageStartupMessages(library(argparse))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(ggrepel))
 
 what_plot <- "DESeq2 差异基因火山图"
 parser <- ArgumentParser(description = what_plot, add_help = TRUE)
 parser$add_argument("--DEGs", dest = "DEGs", help = "csv 格式 DESeq2 差异基因分析结果", required = TRUE)
+parser$add_argument("--gene_list", dest = "GENE_LIST", help = "（可选）火山图标注基因，输入为每个基因一行的文本，要求基因 HGNC SYMBOL", default = NULL)
 parser$add_argument("--output_dir", dest = "OUTDIR", help = "火山图输出目录，脚本保存 pdf 和 png 格式图片。默认：当前目录", default = ".")
 parser$add_argument("--prefix", dest = "PREFIX", help = "输出文件名前缀。默认：NoName", default = "NoName")
 parser$add_argument("--plot_title", dest = "TITLE", help = "火山图标题。默认：Differential Expression Genes", 
@@ -12,15 +14,17 @@ parser$add_argument("--pvalue_cutoff", dest = "PVAL", help = "差异基因 P 值
 parser$add_argument("--log2FC_cutoff", dest = "LOG2FC", help = "差异基因 log2 差异倍数绝对值阈值。默认：1", default = 1)
 parser$add_argument("--max_y", dest = "MAXY", help = "Y 轴最大值，超过的点将被调整到此值。默认：12", default = 12)
 parser$add_argument("--max_x", dest = "MAXX", help = "X 轴绝对值最大值，超过的点将被调整到此值。默认：5", default = 5)
-parser$add_argument("--color1", dest = "COL1", help = "差异基因的颜色。默认：#f2300e", default = "#f2300e")
-parser$add_argument("--color2", dest = "COL2", help = "P 值显著但差异倍数小基因的颜色。默认：#0c775e", default = "#0c775e")
-parser$add_argument("--color3", dest = "COL3", help = "非差异基因的颜色。默认：#352749", default = "#352749")
+parser$add_argument("--color1", dest = "COL1", help = "差异基因的颜色。默认：#f56B949", default = "#56B949")
+parser$add_argument("--color2", dest = "COL2", help = "P 值显著但差异倍数小基因的颜色。默认：#F0A32F", default = "#F0A32F")
+parser$add_argument("--color3", dest = "COL3", help = "非差异基因的颜色。默认：#30499B", default = "#30499B")
+parser$add_argument("--color4", dest = "COL4", help = "注释基因的颜色。默认：#EE4035", default = "#EE4035")
 parser$add_argument("--plot_width", dest = "PLOT_WIDTH", help = "图片宽度（mm），默认：180", default = 180)
 parser$add_argument("--plot_height", dest = "PLOT_HEIGHT", help = "图片高度（mm），默认：200", default = 200)
 
 
 argvs <- parser$parse_args()
 input_path <- file.path(argvs$DEGs)
+gene_list <- argvs$GENE_LIST
 output_dir <- file.path(argvs$OUTDIR)
 prefix <- argvs$PREFIX
 plot_title <- argvs$TITLE
@@ -31,6 +35,7 @@ fc_cutoff <- as.double(argvs$LOG2FC)
 color1 <- argvs$COL1
 color2 <- argvs$COL2
 color3 <- argvs$COL3
+color4 <- argvs$COL4
 plot_width <- as.integer(argvs$PLOT_WIDTH)
 plot_height <- as.integer(argvs$PLOT_HEIGHT)
 
@@ -90,13 +95,33 @@ volcano_plot <- ggplot(plot_data, aes(x, y)) +
     geom_point(aes(colour = data_color, shape = data_shape), show.legend = FALSE) + 
 	  scale_colour_manual(values = c("col1" = color1, "col2" = color2, "col3" = color3)) + 
     scale_shape_manual(values = c("circle" = "circle", "triangle" = "triangle")) +
-	  geom_vline(xintercept = c(- fc_cutoff, fc_cutoff), linetype = "dashed", size = 0.7) + 
-	  geom_hline(yintercept = - log10(pval_cutoff), linetype = "dashed", size = 0.7) + 
+	  geom_vline(xintercept = c(- fc_cutoff, fc_cutoff), linetype = "dashed", size = 0.5) + 
+	  geom_hline(yintercept = - log10(pval_cutoff), linetype = "dashed", size = 0.5) + 
 	  labs(x = "Fold Change(log2)", y = "P value(-log10)", title = plot_title) + 
     scale_x_continuous(limits = c(- max_x, max_x), expand = expansion(mult = c(0.005))) +
     scale_y_continuous(limits = c(0, max_y), expand = expansion(c(0, 0.005))) +
     theme(panel.grid = element_blank(), 
           panel.background = element_rect(fill = "white", colour = "black", linetype = "solid", size = 1.2))
+
+# 注释
+if (!is.null(gene_list)) {
+  gene_list_path <- file.path(gene_list)
+  stopifnot("基因列表路径错误" = file.exists(gene_list_path))
+  genes <- scan(gene_list, what = character(), sep = "\n")
+  
+  label_data <- filter(plot_data, hgnc_symbol %in% genes)
+  if (nrow(label_data) > 0) {
+    volcano_plot <- volcano_plot +
+      ggrepel::geom_text_repel(data = label_data, 
+                               mapping = aes(x, y, label = hgnc_symbol), 
+                               show.legend = FALSE, 
+                               max.time = 1) +
+      geom_point(data = label_data, 
+                 mapping = aes(x, y), color = color4)
+  } else {
+    cat("画图数据没有要注释基因，注意检查数据")
+  }
+}
 
 
 png_file <- paste(prefix, "Volcano.png", sep = "_")
@@ -105,5 +130,3 @@ ggsave(filename = png_file, plot = volcano_plot, dpi = 600, device = "png", path
        width = plot_width, height = plot_height, units = "mm")
 ggsave(filename = pdf_file, plot = volcano_plot, device = "pdf", path = output_dir, 
        width = plot_width, height = plot_height, units = "mm")
-
-writeLines("\no(^▽^)o")
