@@ -2,12 +2,19 @@ suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(tidyverse))
 suppressPackageStartupMessages(library(ggrepel))
 
+# 传参
+{
 what_plot <- "DESeq2 差异基因火山图"
 parser <- ArgumentParser(description = what_plot, add_help = TRUE)
 parser$add_argument("--DEGs", dest = "DEGs", help = "csv 格式 DESeq2 差异基因分析结果", required = TRUE)
-parser$add_argument("--gene_list", dest = "GENE_LIST", help = "（可选）火山图标注基因，输入为每个基因一行的文本，要求基因 HGNC SYMBOL", default = NULL)
-parser$add_argument("--output_dir", dest = "OUTDIR", help = "火山图输出目录，脚本保存 pdf 和 png 格式图片。默认：当前目录", default = ".")
+parser$add_argument("--output_dir", dest = "OUTDIR", help = "火山图保存目录。默认：当前目录", default = ".")
 parser$add_argument("--prefix", dest = "PREFIX", help = "输出文件名前缀。默认：NoName", default = "NoName")
+parser$add_argument("--annot_list", dest = "ANNOT_LIST", help = "每个基因一行的注释基因列表文件", 
+                    default = NULL)
+parser$add_argument("--annot_gene", dest = "ANNOT_GENE", help = "注释基因，多个基因用逗号 \",\" 分隔", 
+                    default = NULL)
+parser$add_argument("--label_column", dest = "LABEL_COLUMN", help = "注释基因列名，默认 hgnc_symbol", 
+                    default = "hgnc_symbol")
 parser$add_argument("--plot_title", dest = "TITLE", help = "火山图标题。默认：Differential Expression Genes", 
                     default = "Differential Expression Genes")
 parser$add_argument("--pvalue_cutoff", dest = "PVAL", help = "差异基因 P 值阈值。默认：0.05", default = 0.05)
@@ -24,22 +31,26 @@ parser$add_argument("--plot_height", dest = "PLOT_HEIGHT", help = "图片高度�
 
 argvs <- parser$parse_args()
 input_path <- file.path(argvs$DEGs)
-gene_list <- argvs$GENE_LIST
+annot_list_pm <- argvs$ANNOT_LIST
+annot_gene_pm <- argvs$ANNOT_GENE
+label_column <- argvs$LABEL_COLUMN
 output_dir <- file.path(argvs$OUTDIR)
 prefix <- argvs$PREFIX
 plot_title <- argvs$TITLE
 max_y <- as.double(argvs$MAXY)
 max_x <- as.double(argvs$MAXX)
 pval_cutoff <- as.double(argvs$PVAL)
-fc_cutoff <- as.double(argvs$LOG2FC)
+fc_cutoff <- abs(as.double(argvs$LOG2FC))
 color1 <- argvs$COL1
 color2 <- argvs$COL2
 color3 <- argvs$COL3
 color4 <- argvs$COL4
 plot_width <- as.integer(argvs$PLOT_WIDTH)
 plot_height <- as.integer(argvs$PLOT_HEIGHT)
+}
 
-
+# 函数
+{
 # 被压缩的点用三角形，以示区别
 shape_value <- function(p_value, log2_foldchange, max_x, max_y) {
   if (- log10(p_value) <= max_y & (log2_foldchange >= - max_x & log2_foldchange <= max_x)) {
@@ -83,11 +94,56 @@ get_color <- function(log2fc, padj) {
   return(data_col)
 }
 
+# 火山图添加注释基因
+annot_plot <- function(raw_plot_data, gene_list, raw_plot) {
+  label_data <- filter(raw_plot_data, .data[[label_column]] %in% gene_list)
+  if (nrow(label_data) > 0) {
+    annot_plot <- raw_plot +
+      ggrepel::geom_text_repel(data = label_data, 
+                               mapping = aes(x, y, label = .data[[label_column]]), 
+                               show.legend = FALSE, 
+                               max.time = 1) +
+      geom_point(data = label_data, 
+                 mapping = aes(x, y), color = color4)
+  } else {
+    cat("画图数据没有要注释基因，注意检查数据\n")
+    annot_plot <- raw_plot
+  }
+  return(annot_plot)
+}
+
+degs_summary <- function(x) {
+  up_num <- filter(x, padj < pval_cutoff, log2FoldChange > 0) %>% 
+    nrow()
+  down_num <- filter(x, padj < pval_cutoff, log2FoldChange < 0) %>% 
+    nrow()
+  cat("\n差异基因总结：\n")
+  cat("P 值显著上调基因数 ")
+  cat(up_num)
+  cat("\n")
+  cat("P 值显著下调基因数 ")
+  cat(down_num)
+  cat("\n")
+  
+  up_num <- filter(x, padj < pval_cutoff, log2FoldChange >= fc_cutoff) %>% 
+    nrow()
+  down_num <- filter(x, padj < pval_cutoff, log2FoldChange <= (- fc_cutoff)) %>% 
+    nrow()
+  cat("P 值和差异倍数符合条件上调基因数 ")
+  cat(up_num)
+  cat("\n")
+  cat("P 值和差异倍数符合条件下调基因数 ")
+  cat(down_num)
+  cat("\n\n")
+}
+}
+
 plot_data <- read_csv(input_path) %>% 
   filter(!is.na(padj)) %>% 
   mutate(x = map2_dbl(log2FoldChange, max_x, adjust_x), y = map2_dbl(padj, max_y, adjust_y), 
          data_shape = pmap_chr(list(padj, log2FoldChange, max_x, max_y), shape_value), 
          data_color = map2_chr(log2FoldChange, padj, get_color))
+degs_summary(plot_data)
 
 # 不显示 Legend
 # 设置 expand 让图像框不覆盖点
@@ -104,29 +160,23 @@ volcano_plot <- ggplot(plot_data, aes(x, y)) +
           panel.background = element_rect(fill = "white", colour = "black", linetype = "solid", size = 1.2))
 
 # 注释
-if (!is.null(gene_list)) {
-  gene_list_path <- file.path(gene_list)
+if (!is.null(annot_list_pm)) {
+  gene_list_path <- file.path(annot_list_pm)
   stopifnot("基因列表路径错误" = file.exists(gene_list_path))
   genes <- scan(gene_list, what = character(), sep = "\n")
-  
-  label_data <- filter(plot_data, hgnc_symbol %in% genes)
-  if (nrow(label_data) > 0) {
-    volcano_plot <- volcano_plot +
-      ggrepel::geom_text_repel(data = label_data, 
-                               mapping = aes(x, y, label = hgnc_symbol), 
-                               show.legend = FALSE, 
-                               max.time = 1) +
-      geom_point(data = label_data, 
-                 mapping = aes(x, y), color = color4)
-  } else {
-    cat("画图数据没有要注释基因，注意检查数据")
-  }
+  vplot <- annot_plot(plot_data, genes, volcano_plot)
+} else if (!is.null(annot_gene_pm)) {
+  genes <- str_split(annot_gene_pm, pattern = ",") %>% 
+    unlist()
+  vplot <- annot_plot(plot_data, genes, volcano_plot)
+} else {
+  vplot <- volcano_plot
 }
 
 
 png_file <- paste(prefix, "Volcano.png", sep = "_")
 pdf_file <- paste(prefix, "Volcano.pdf", sep = "_")
-ggsave(filename = png_file, plot = volcano_plot, dpi = 600, device = "png", path = output_dir, 
+ggsave(filename = png_file, plot = vplot, dpi = 600, device = "png", path = output_dir, 
        width = plot_width, height = plot_height, units = "mm")
-ggsave(filename = pdf_file, plot = volcano_plot, device = "pdf", path = output_dir, 
+ggsave(filename = pdf_file, plot = vplot, device = "pdf", path = output_dir, 
        width = plot_width, height = plot_height, units = "mm")

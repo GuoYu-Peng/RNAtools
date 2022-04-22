@@ -7,8 +7,9 @@ what_plot <- "GSEA 过程 ES 图"
 parser <- ArgumentParser(description = what_plot, add_help = TRUE)
 parser$add_argument("--gsea", dest = "GSEA", help = "clusterProfiler GSEA 分析结果（rds）", required = TRUE)
 parser$add_argument("--output_dir", dest = "OUTPUT_DIR", help = "输出目录，默认当前目录", default = ".")
-parser$add_argument("--list_path", dest = "LIST_PATH", help = "画图的通路列表，每个通路 ID 一行")
-parser$add_argument("--geneset", dest = "GENESET", help = "通路 ID. 画一条通路时无需保存到文件，直接指定", 
+parser$add_argument("--list_path", dest = "LIST_PATH", help = "画图的通路列表，每个通路 ID 一行", 
+                    default = NULL)
+parser$add_argument("--geneset", dest = "GENESET", help = "直接指定通路 ID. 如果多条用逗号 \",\" 分隔", 
                     default = NULL)
 # 默认颜色取自 BuenColors 的 brewer 系列
 parser$add_argument("--line_color", dest = "LINE_COLOR", help = "ES 线颜色，默认：#74c476", default = "#74c476")
@@ -24,7 +25,7 @@ parser$add_argument("--plot_width", dest = "WIDTH", help = "图片宽度（mm）
 argvs <- parser$parse_args()
 gsea_path <- file.path(argvs$GSEA)
 output_dir <- file.path(argvs$OUTPUT_DIR)
-list_path <- file.path(argvs$LIST_PATH)
+list_para <- argvs$LIST_PATH
 geneset_para <- argvs$GENESET
 line_color <- argvs$LINE_COLOR
 point_color <- argvs$POINT_COLOR
@@ -105,24 +106,34 @@ p_text <- function(padj) {
   return(ptext)
 }
 
-gsea_run <- readRDS(gsea_path)
-gsea_resut <- gsea_run@result
-if (is.null(geneset_para)) {
-  genesets <- scan(file = list_path, sep = "\n", what = character()) %>% 
-    unique()
-} else {
-  genesets <- geneset_para
+need_sets <- function(gsea_result, limit1, limit2) {
+  gsea_sets <- gsea_result$ID
+  if (!is.null(limit1)) {
+    list_path <- file.path(limit1)
+    limit_sets <- scan(file = list_path, sep = "\n", what = character()) %>% 
+      unique()
+  } else if (!is.null(limit2)) {
+    limit_sets <- limit2 %>% 
+      strsplit(split = ",", fixed = TRUE) %>% 
+      unlist()
+  } else {
+    limit_sets <- gsea_sets
+  }
+  need_sets <- intersect(gsea_sets, limit_sets)
+  return(need_sets)
 }
-runningsets <- gsea_resut$ID
-needsets <- genesets[which(genesets %in% runningsets)]
+
+gsea_run <- readRDS(gsea_path)
+gsea_result <- gsea_run@result
+needsets <- need_sets(gsea_result, list_para, geneset_para)
 cat("以下通路在富集结果：\n")
 print(needsets)
-stopifnot("无可画图基因集" = length(needsets) >0)
+stopifnot("无可画图基因集" = length(needsets) > 0)
 
 
 for (each_set in needsets) {
   set_data <- gsInfo(gsea_run, each_set)
-  set_result <- filter(gsea_resut, ID == each_set)
+  set_result <- filter(gsea_result, ID == each_set)
   leading_genes <- pull(set_result, core_enrichment) %>% 
     strsplit(split = "/", fixed = TRUE) %>% 
     unlist()

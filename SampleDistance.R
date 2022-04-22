@@ -89,5 +89,3 @@ print(pca_plot)
 plot(data_clust, xlab = "Sample", main = "Sample Clusters")
 draw(hm_plot)
 dev.off()
-
-q(save = "no")
