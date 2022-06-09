@@ -1,7 +1,7 @@
+temporaty.R
 *.Rproj
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
-test/*.png
-test/*.pdf
+test/
