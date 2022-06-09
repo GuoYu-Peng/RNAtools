@@ -1,0 +1,51 @@
+[2022-06-08 15:48:09.776] [jointLog] [info] setting maxHashResizeThreads to 20
+[2022-06-08 15:48:09.776] [jointLog] [info] Fragment incompatibility prior below threshold.  Incompatible fragments will be ignored.
+[2022-06-08 15:48:09.776] [jointLog] [info] Usage of --validateMappings implies use of minScoreFraction. Since not explicitly specified, it is being set to 0.65
+[2022-06-08 15:48:09.776] [jointLog] [info] Usage of --validateMappings implies a default consensus slack of 0.2. Setting consensusSlack to 0.35.
+[2022-06-08 15:48:09.776] [jointLog] [info] parsing read library format
+[2022-06-08 15:48:09.776] [jointLog] [info] There is 1 library.
+[2022-06-08 15:48:09.830] [jointLog] [info] Loading pufferfish index
+[2022-06-08 15:48:09.830] [jointLog] [info] Loading dense pufferfish index.
+[2022-06-08 15:48:12.334] [jointLog] [info] done
+[2022-06-08 15:48:12.334] [jointLog] [info] Index contained 228,832 targets
+[2022-06-08 15:48:12.419] [jointLog] [info] Number of decoys : 78
+[2022-06-08 15:48:12.419] [jointLog] [info] First decoy index : 228,715 
+[2022-06-08 15:48:15.574] [jointLog] [info] Computed 84,024 rich equivalence classes for further processing
+[2022-06-08 15:48:15.574] [jointLog] [info] Counted 417,862 total reads in the equivalence classes 
+[2022-06-08 15:48:15.584] [jointLog] [warning] 0.0076% of fragments were shorter than the k used to build the index.
+If this fraction is too large, consider re-building the index with a smaller k.
+The minimum read size found was 15.
+
+
+[2022-06-08 15:48:15.584] [jointLog] [info] Number of mappings discarded because of alignment score : 278,241
+[2022-06-08 15:48:15.584] [jointLog] [info] Number of fragments entirely discarded because of alignment score : 25,183
+[2022-06-08 15:48:15.584] [jointLog] [info] Number of fragments discarded because they are best-mapped to decoys : 2,599
+[2022-06-08 15:48:15.584] [jointLog] [info] Number of fragments discarded because they have only dovetail (discordant) mappings to valid targets : 1,629
+[2022-06-08 15:48:15.610] [jointLog] [warning] Only 417862 fragments were mapped, but the number of burn-in fragments was set to 5000000.
+The effective lengths have been computed using the observed mappings.
+
+[2022-06-08 15:48:15.610] [jointLog] [info] Mapping rate = 83.5724%
+
+[2022-06-08 15:48:15.610] [jointLog] [info] finished quantifyLibrary()
+[2022-06-08 15:48:15.610] [jointLog] [info] Starting optimizer
+[2022-06-08 15:48:15.717] [jointLog] [info] Marked 0 weighted equivalence classes as degenerate
+[2022-06-08 15:48:15.732] [jointLog] [info] iteration = 0 | max rel diff. = 179.764
+[2022-06-08 15:48:15.575] [fileLog] [info] 
+At end of round 0
+==================
+Observed 500000 total fragments (500000 in most recent round)
+
+[2022-06-08 15:48:17.082] [jointLog] [info] iteration = 100 | max rel diff. = 2.57917
+[2022-06-08 15:48:18.418] [jointLog] [info] iteration = 200 | max rel diff. = 0.424514
+[2022-06-08 15:48:19.752] [jointLog] [info] iteration = 300 | max rel diff. = 0.210725
+[2022-06-08 15:48:21.088] [jointLog] [info] iteration = 400 | max rel diff. = 0.0143358
+[2022-06-08 15:48:22.422] [jointLog] [info] iteration = 500 | max rel diff. = 0.121489
+[2022-06-08 15:48:22.932] [jointLog] [info] iteration = 539 | max rel diff. = 0.00339866
+[2022-06-08 15:48:22.964] [jointLog] [info] Finished optimizer
+[2022-06-08 15:48:22.964] [jointLog] [info] writing output 
+
+[2022-06-08 15:48:23.298] [jointLog] [info] Computing gene-level abundance estimates
+[2022-06-08 15:49:04.810] [jointLog] [info] There were 229580 transcripts mapping to 60656 genes
+[2022-06-08 15:49:04.810] [jointLog] [info] NOTE: We recommend using tximport (https://bioconductor.org/packages/release/bioc/html/tximport.html) for aggregating transcript-level salmon abundance estimates to the gene level.  It is more versatile, exposes more features, and allows considering multi-sample information during aggregation.
+[2022-06-08 15:49:05.183] [jointLog] [info] Aggregating expressions to gene level
+[2022-06-08 15:49:05.316] [jointLog] [info] done

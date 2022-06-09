@@ -1,0 +1,22 @@
+{
+    "read_files": "[ /home/pengguoyu/MyRepo/RNAtools/test/fastqc/B3_R1.fastq.gz, /home/pengguoyu/MyRepo/RNAtools/test/fastqc/B3_R2.fastq.gz]",
+    "expected_format": "IU",
+    "compatible_fragment_ratio": 1.0,
+    "num_compatible_fragments": 450104,
+    "num_assigned_fragments": 450104,
+    "num_frags_with_concordant_consistent_mappings": 437220,
+    "num_frags_with_inconsistent_or_orphan_mappings": 19616,
+    "strand_mapping_bias": 0.49639769452449569,
+    "MSF": 0,
+    "OSF": 0,
+    "ISF": 217035,
+    "MSR": 0,
+    "OSR": 0,
+    "ISR": 220185,
+    "SF": 9306,
+    "SR": 10310,
+    "MU": 0,
+    "OU": 0,
+    "IU": 0,
+    "U": 0
+}

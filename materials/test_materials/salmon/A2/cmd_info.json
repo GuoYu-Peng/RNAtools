@@ -1,0 +1,10 @@
+{
+    "salmon_version": "1.3.0",
+    "libType": "IU",
+    "index": "/home/pengguoyu/Database/GRCh38/GENCODE/transcripts_index_salmon",
+    "mates1": "/home/pengguoyu/MyRepo/RNAtools/test/fastqc/A2_R1.fastq.gz",
+    "mates2": "/home/pengguoyu/MyRepo/RNAtools/test/fastqc/A2_R2.fastq.gz",
+    "output": "/home/pengguoyu/MyRepo/RNAtools/test/salmon/A2",
+    "geneMap": "/home/pengguoyu/Database/GRCh38/GENCODE/gencode.v35.annotation.gtf",
+    "auxDir": "aux_info"
+}
