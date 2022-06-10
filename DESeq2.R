@@ -4,19 +4,7 @@ suppressPackageStartupMessages(library(tximport))
 suppressPackageStartupMessages(library(DESeq2))
 suppressPackageStartupMessages(library(tidyverse))
 
-check_path <- function(x, quit = FALSE, mkdir = FALSE) {
-  if (!file.exists(x)) {
-    if (quit) {
-      writeLines("[ERROR] path does not exist:")
-      print(x)
-      quit(status = 1)
-    } else {
-      if (mkdir) {
-        dir.create(x)
-      }
-    }
-  }
-}
+source("shareobj.R")
 
 # remove gene version
 short_id <- function(x) {
@@ -33,8 +21,8 @@ parser$add_argument("--salmon", dest = "SALMON", default = "salmon",
                     help = "salmon results directory. Default: ./salmon")
 parser$add_argument("--group", dest = "GROUP", default = "sample_group.csv", 
                     help = "group information in csv format, first column is sample name, second column is group. Default: ./sample_group.csv")
-parser$add_argument("--control", dest = "CONTROL", required = TRUE, 
-                    help = "which group is control samples?")
+parser$add_argument("--control", dest = "CONTROL", default = NULL, 
+                    help = "specific which group is control.")
 parser$add_argument("--counts", dest = "COUNTS", default = NULL, 
                     help = "read counts matrix in csv format. This will overwrite --salmon")
 parser$add_argument("--genome", dest = "GENOME", default = "GRCh38", 
@@ -47,7 +35,7 @@ project_dir <- file.path(argvs$PROJECT)
 salmon_dir <- file.path(argvs$SALMON)
 group_path <- file.path(argvs$GROUP)
 tx2gene_path <- file.path(argvs$TX2GENE)
-ctr_group <- argvs$CONTROL
+ctr_setting <- argvs$CONTROL
 genome <- argvs$GENOME
 
 check_path(group_path, quit = TRUE)
@@ -55,10 +43,20 @@ check_path(project_dir, mkdir = TRUE)
 
 group_info <- read.csv(group_path, header = TRUE, stringsAsFactors = TRUE)
 colnames(group_info) <- c("sample", "treatment")
-group_info$treatment <- relevel(group_info$treatment, ref = ctr_group)
+if (is.null(ctr_setting)) {
+  grp_lev <- levels(group_info$treatment)
+  ctr_group <- grp_lev[1]
+  test_group <- grp_lev[2]
+} else {
+  ctr_group <- ctr_setting
+  group_info$treatment <- relevel(group_info$treatment, ref = ctr_group)
+  test_group <- levels(group_info$treatment)[2]
+}
 writeLines("\n[INFO] group information:")
 print(group_info)
-test_group <- levels(group_info$treatment)[2]
+writeLines("\n[INFO] control group:")
+print(ctr_group)
+
 
 x <- table(group_info$treatment)
 if (any(x < 3)) {
