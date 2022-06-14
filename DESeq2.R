@@ -1,10 +1,13 @@
+suppressPackageStartupMessages(library(this.path))
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(biomaRt))
 suppressPackageStartupMessages(library(tximport))
 suppressPackageStartupMessages(library(DESeq2))
 suppressPackageStartupMessages(library(tidyverse))
 
-source("shareobj.R")
+
+src_dir <- this.path::this.dir()
+source(file.path(src_dir, "shareobj.R"))
 
 # remove gene version
 short_id <- function(x) {

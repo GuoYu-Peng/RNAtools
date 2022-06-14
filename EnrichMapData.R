@@ -1,8 +1,12 @@
+suppressPackageStartupMessages(library(this.path))
 suppressPackageStartupMessages(library(org.Hs.eg.db))
 suppressPackageStartupMessages(library(KEGGREST))
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(tidyverse))
 
+
+src_dir <- this.path::this.dir()
+source(file.path(src_dir, "shareobj.R"))
 
 tool_desc <- "将多个通路按重叠基因数目输出到表格适合生成网络图，可添加 GSEA 结果。"
 parser <- ArgumentParser(description = tool_desc, add_help = TRUE)

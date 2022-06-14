@@ -1,6 +1,11 @@
+suppressPackageStartupMessages(library(this.path))
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(tidyverse))
 suppressPackageStartupMessages(library(ggrepel))
+
+
+src_dir <- this.path::this.dir()
+source(file.path(src_dir, "shareobj.R"))
 
 # 传参
 {

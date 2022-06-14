@@ -1,9 +1,12 @@
+suppressPackageStartupMessages(library(this.path))
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(org.Hs.eg.db))
 suppressPackageStartupMessages(library(clusterProfiler))
 suppressPackageStartupMessages(library(tidyverse))
 
-source("shareobj.R")
+
+src_dir <- this.path::this.dir()
+source(file.path(src_dir, "shareobj.R"))
 
 x <- "GSEA of DEGs from DESeq2"
 parser <- ArgumentParser(description = x, add_help = TRUE)

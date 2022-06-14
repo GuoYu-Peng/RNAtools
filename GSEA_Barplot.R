@@ -1,6 +1,9 @@
+suppressPackageStartupMessages(library(this.path))
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(tidyverse))
 
+src_dir <- this.path::this.dir()
+source(file.path(src_dir, "shareobj.R"))
 
 what_plot <- "clusterProfiler GSEA 分析结果柱状图"
 parser <- ArgumentParser(description = what_plot, add_help = TRUE)

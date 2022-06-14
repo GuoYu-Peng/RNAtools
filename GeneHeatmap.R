@@ -1,8 +1,12 @@
+suppressPackageStartupMessages(library(this.path))
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(tidyverse))
 suppressPackageStartupMessages(library(ComplexHeatmap))
 suppressPackageStartupMessages(library(viridis))
 
+
+src_dir <- this.path::this.dir()
+source(file.path(src_dir, "shareobj.R"))
 
 what_plot <- "从基因表达矩阵生成热图，默认第一列为基因 ID"
 parser <- ArgumentParser(description = what_plot, add_help = TRUE)

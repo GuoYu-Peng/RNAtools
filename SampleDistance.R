@@ -1,9 +1,12 @@
+suppressPackageStartupMessages(library(this.path))
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(tidyverse))
 suppressPackageStartupMessages(library(ComplexHeatmap))
 suppressPackageStartupMessages(library(viridis))
 suppressPackageStartupMessages(library(ggrepel))
 
+src_dir <- this.path::this.dir()
+source(file.path(src_dir, "shareobj.R"))
 
 what_plot <- "以差异基因表达数据计算样品距离"
 parser <- ArgumentParser(description = what_plot, add_help = TRUE)

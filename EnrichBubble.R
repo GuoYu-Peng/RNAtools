@@ -1,8 +1,12 @@
+suppressPackageStartupMessages(library(this.path))
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(tidyverse))
 
 
-what_plot <- "clusterProfiler 通路富集分析结果泡泡图"
+src_dir <- this.path::this.dir()
+source(file.path(src_dir, "shareobj.R"))
+
+x <- "clusterProfiler 通路富集分析结果泡泡图"
 parser <- ArgumentParser(description = what_plot, add_help = TRUE)
 parser$add_argument("--enrich_result", dest = "ENRICHMENT", help = "csv 格式 clusterProfiler 通路富集结果", required = TRUE)
 parser$add_argument("--output", dest = "OUTPUT", help = "图片输出路径，要求为 pdf 格式。默认：Bubble.pdf", 
@@ -38,6 +42,7 @@ p_max_color <- argvs$P_MAX_COLOR
 plot_width <- as.integer(argvs$PLOT_WIDTH)
 height_scale <- as.numeric(argvs$HEIGHT_SCALE)
 
+check_path(enrich_path, TRUE, FALSE)
 
 # 保留需要做图的数据
 # 如果给定了通路列表，那么限定通路数目不起作用

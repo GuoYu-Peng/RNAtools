@@ -1,7 +1,11 @@
+suppressPackageStartupMessages(library(this.path))
 suppressPackageStartupMessages(library(tidyverse))
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(ggrepel))
 suppressPackageStartupMessages(library(org.Hs.eg.db))
+
+src_dir <- this.path::this.dir()
+source(file.path(src_dir, "shareobj.R"))
 
 what_plot <- "GSEA 过程 ES 图"
 parser <- ArgumentParser(description = what_plot, add_help = TRUE)
