@@ -8,15 +8,22 @@ suppressPackageStartupMessages(library(tidyverse))
 src_dir <- this.path::this.dir()
 source(file.path(src_dir, "shareobj.R"))
 
-tool_desc <- "将多个通路按重叠基因数目输出到表格适合生成网络图，可添加 GSEA 结果。"
-parser <- ArgumentParser(description = tool_desc, add_help = TRUE)
-parser$add_argument("--list", dest = "LIST", help = "通路列表文件，每个通路一行，限定为人种 KEGG 或 GO 通路", required = TRUE)
-parser$add_argument("--GSEA", dest = "GSEA", help = "csv 格式 GSEA 结果，如果提供将多输出一个表，把 GSEA 数据映射到节点", default = NULL)
-parser$add_argument("--output_dir", dest = "OUTDIR", help = "输出目录，默认当前目录", default = ".")
-parser$add_argument("--basename", dest = "BASENAME", help = "输出文件前缀，默认 pathway", default = "pathway")
-parser$add_argument("--gmt", dest = "GMT", help = "通路 GMT 文件，不提供时脚本会自动获取通路数据", default = NULL)
-parser$add_argument("--type", dest = "TYPE", help = "KEGG 或 GO 通路？默认 KEGG", default = "KEGG")
-parser$add_argument("--min_percent", dest = "PERCENT", help = "重叠基因数占较小通路最低比例要求，默认 0.25", default = 0.25)
+x <- "Prepare EnrichMap data from genesets"
+parser <- ArgumentParser(description = x, add_help = TRUE)
+parser$add_argument("--list", dest = "LIST", required = TRUE, 
+                    help = "GO/KEGG geneset list file, each geneset per line")
+parser$add_argument("--GSEA", dest = "GSEA", default = NULL, 
+                    help = "GSEA result in csv format")
+parser$add_argument("--output_dir", dest = "OUTDIR", default = ".", 
+                    help = "output directory, default: ./")
+parser$add_argument("--basename", dest = "BASENAME", default = "pathway", 
+                    help = "prefix of output, default: pathway")
+parser$add_argument("--gmt", dest = "GMT", default = NULL, 
+                    help = "provide genesets in GMT format, script will fetch geneset data from the internet by default")
+parser$add_argument("--type", dest = "TYPE", default = "KEGG", 
+                    help = "KEGG or GO genesets?")
+parser$add_argument("--min_percent", dest = "PERCENT", default = 0.25, 
+                    help = "minimal geneset overlap fractions, default: 0.25")
 
 argvs <- parser$parse_args()
 list_path <- file.path(argvs$LIST)
@@ -101,8 +108,7 @@ network_pass <- filter(network_raw, percent_min >= min_percent)
 network_fail <- filter(network_raw, percent_min < min_percent)
 glimpse(network_pass)
 if (nrow(network_fail) >= 1) {
-  cat("\n")
-  cat("移除以下占比过低条目：\n")
+  log_msg(level = "WARN", "remove genesets:")
   print(network_fail)
 }
 
@@ -122,10 +128,8 @@ if (!is.null(gsea_status)) {
 }
 glimpse(node_attrs)
 
-out_file1 <- paste(name_prefix, "network.csv", sep = "_")
-out_path1 <- file.path(output_dir, out_file1)
-out_file2 <- paste(name_prefix, "attributes.csv", sep = "_")
-out_path2 <- file.path(output_dir, out_file2)
+out_path1 <- make_path(output_dir, "csv", name_prefix, "network")
+out_path2 <- make_path(output_dir, "csv", name_prefix, "attributes")
 
 write_csv(network_pass, out_path1)
 write_csv(node_attrs, out_path2)

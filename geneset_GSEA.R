@@ -50,15 +50,15 @@ for (each_target in target_list) {
 }
 # check gene sets
 if (length(keep_target) == 0) {
-  writeLines("\n[ERROR] all gene sets illegal:")
+  log_msg("ERROR", "all gene sets illegal:")
   print(rm_target)
   quit(status = 1)
 }
 if (length(rm_target) != 0) {
-  writeLines("\n[WARN] unknown gene sets:")
+  log_msg("WARN", "unknown gene sets:")
   print(rm_target)
 }
-writeLines("\n[INFO] gene set list:")
+log_msg("INFO", "gene set list:")
 print(keep_target)
 
 
@@ -71,7 +71,7 @@ run_KEGG <- function(rank_list, output_dir, ...) {
                        minGSSize = 15, maxGSSize = 300, eps = 0, pvalueCutoff = 0.1)
   
   if (is.null(gsea_kegg)) {
-    writeLines("\n[WARN] no KEGG GSEA results")
+    log_msg("WARN", "no KEGG GSEA results")
   } else {
     kegg_tb <- as_tibble(gsea_kegg@result)
     write_csv(kegg_tb, csv_path)
@@ -88,8 +88,7 @@ run_GO <- function(rank_list, output_dir, ont = "BP", ...) {
                     keyType = "ENTREZID", minGSSize = 15, maxGSSize = 300, 
                     eps = 0, pvalueCutoff = 0.1)
   if (is.null(gsea_go1)) {
-    warn_msg <- paste("\n[WARN] no GO", ont, " GSEA results", sep = "")
-    writeLines(warn_msg)
+    log_msg("WARN", "no GO", ont, " GSEA results")
   } else {
     gsea_go2 <- clusterProfiler::simplify(gsea_go1)
     go_tb <- as_tibble(gsea_go2@result)
@@ -115,10 +114,9 @@ if (genome == "GRCh38") {
   fc_rank <- DEGs$log2FoldChange
   names(fc_rank) <- DEGs$hsapiens_homolog_entrez_gene
 } else {
-  err_msg <- paste("\n[ERROR] unsupported genome: ", genome, sep = "")
-  writeLines(err_msg)
+  log_msg("ERROR", "unsupported genome: ", genome)
 }
-writeLines("\n[INFO] ranked list head and tail:")
+log_msg("INFO", "ranked list head and tail:")
 print(head(fc_rank))
 print(tail(fc_rank))
 
@@ -132,6 +130,6 @@ for (each_target in keep_target) {
   } else if (each_target == "GOCC") {
     run_GO(fc_rank,output_dir, "CC", prefix, "GSEA", "GOCC")
   } else {
-    writeLines(log_msg(level = "WARN", "unsupported gene set: ", each_target))
+    log_msg(level = "WARN", "unsupported gene set: ", each_target)
   }
 }

@@ -8,16 +8,22 @@ suppressPackageStartupMessages(library(ggrepel))
 src_dir <- this.path::this.dir()
 source(file.path(src_dir, "shareobj.R"))
 
-what_plot <- "以差异基因表达数据计算样品距离"
-parser <- ArgumentParser(description = what_plot, add_help = TRUE)
-parser$add_argument("--expression", dest = "EXPR", help = "csv 格式的表达数据", required = TRUE)
-parser$add_argument("--group", dest = "GROUP", help = "csv 格式样品分组文件，默认第一列为样品名", required = TRUE)
-parser$add_argument("--DEGs", dest = "DEGs", help = "csv 格式过滤后的 DESeq2 差异基因分析结果", required = TRUE)
-parser$add_argument("--output", dest = "OUTPUT", help = "图片输出路径，要求为 pdf 格式。默认：SampleDIST.pdf", 
-                    default = "SampleDIST.pdf")
-parser$add_argument("--column", dest = "COLUMN", help = "样品分组的列。默认：Group", default = "Group")
-parser$add_argument("--slice", dest = "SLICE", help = "取指定分组值样本，用逗号 \",\" 分割", default = NULL)
-parser$add_argument("--dist_method", dest = "DIST_METHOD", help = "计算样品距离方法。默认：euclidean", default = "euclidean")
+x <- "sample distance of RNAseq"
+parser <- ArgumentParser(description = x, add_help = TRUE)
+parser$add_argument("--expression", dest = "EXPR", required = TRUE, 
+                    help = "expression data in CSV format")
+parser$add_argument("--group", dest = "GROUP", required = TRUE, 
+                    help = "group information in CSV format, first column is sample name.")
+parser$add_argument("--DEGs", dest = "DEGs", required = TRUE, 
+                    help = "filtered DESeq2 DEGs results in CSV format")
+parser$add_argument("--output", dest = "OUTPUT", default = "SampleDIST.pdf", 
+                    help = "output, default: SampleDIST.pdf")
+parser$add_argument("--column", dest = "COLUMN", default = "Group", 
+                    help = "plot grouping column, default: Group")
+parser$add_argument("--slice", dest = "SLICE", default = NULL, 
+                    help = "select sample groups, use commas to separate multiple groups")
+parser$add_argument("--dist_method", dest = "DIST_METHOD", default = "euclidean", 
+                    help = "distance method, default: euclidean")
 
 
 argvs <- parser$parse_args()
@@ -86,7 +92,6 @@ hm_plot <- Heatmap(hm_data, name = hm_name, col = hm_color, cluster_rows = TRUE,
               column_title_side = "top")
 
 
-# ------ 保存到 pdf ------
 pdf(output_path, width = 9, height = 9)
 print(pca_plot)
 plot(data_clust, xlab = "Sample", main = "Sample Clusters")

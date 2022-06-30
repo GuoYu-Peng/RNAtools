@@ -7,19 +7,25 @@ suppressPackageStartupMessages(library(org.Hs.eg.db))
 src_dir <- this.path::this.dir()
 source(file.path(src_dir, "shareobj.R"))
 
-what_plot <- "GSEA 过程 ES 图"
-parser <- ArgumentParser(description = what_plot, add_help = TRUE)
-parser$add_argument("--gsea", dest = "GSEA", help = "clusterProfiler GSEA 分析结果（rds）", required = TRUE)
-parser$add_argument("--output_dir", dest = "OUTPUT_DIR", help = "输出目录，默认当前目录", default = ".")
-parser$add_argument("--list_path", dest = "LIST_PATH", help = "画图的通路列表，每个通路 ID 一行", 
-                    default = NULL)
-parser$add_argument("--geneset", dest = "GENESET", help = "直接指定通路 ID. 如果多条用逗号 \",\" 分隔", 
-                    default = NULL)
+x <- "ES plot of GSEA"
+parser <- ArgumentParser(description = x, add_help = TRUE)
+parser$add_argument("--gsea", dest = "GSEA", required = TRUE, 
+                    help = "clusterProfiler GSEA results in rds format")
+parser$add_argument("--output_dir", dest = "OUTPUT_DIR", default = ".", 
+                    help = "output directory, default: ./")
+parser$add_argument("--list_path", dest = "LIST_PATH", default = NULL, 
+                    help = "gene set list in a file, per gene set one line")
+parser$add_argument("--geneset", dest = "GENESET", default = NULL, 
+                    help = "gene set IDs, comma separate if specific multiple gene sets, e.g. hsa04060,hsa04921")
 # 默认颜色取自 BuenColors 的 brewer 系列
-parser$add_argument("--line_color", dest = "LINE_COLOR", help = "ES 线颜色，默认：#74c476", default = "#74c476")
-parser$add_argument("--point_color", dest = "POINT_COLOR", help = "核心富集基因点颜色，默认：#fd8d3c", default = "#fd8d3c")
-parser$add_argument("--segment_color1", dest = "SEG_COL1", help = "核心富集基因线段颜色，默认：#fb6a4a", default = "#fb6a4a")
-parser$add_argument("--segment_color2", dest = "SEG_COL2", help = "非核心富集基因线段颜色，默认：#6baed6", default = "#6baed6")
+parser$add_argument("--line_color", dest = "LINE_COLOR", default = "#74c476", 
+                    help = "ES line color, default: #74c476")
+parser$add_argument("--point_color", dest = "POINT_COLOR", default = "#fd8d3c", 
+                    help = "dot color of core enriched genes, default: #fd8d3c")
+parser$add_argument("--segment_color1", dest = "SEG_COL1", default = "#fb6a4a", 
+                    help = "segment color of core enriched genes, default: #fb6a4a")
+parser$add_argument("--segment_color2", dest = "SEG_COL2", default = "#6baed6", 
+                    help = "segment color of non core enriched genes, default: #6baed6")
 parser$add_argument("--line_width", dest = "LINE_WIDTH", help = "ES 线宽度，默认：0.6", default = 0.6)
 parser$add_argument("--segment_width1", dest = "SEG_WIDTH1", help = "核心富集基因线段宽度，默认：0.4", default = 0.4)
 parser$add_argument("--segment_width2", dest = "SEG_WIDTH2", help = "非核心富集基因线段宽度，默认：0.4", default = 0.4)

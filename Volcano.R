@@ -7,31 +7,42 @@ suppressPackageStartupMessages(library(ggrepel))
 src_dir <- this.path::this.dir()
 source(file.path(src_dir, "shareobj.R"))
 
-# 传参
-{
-what_plot <- "DESeq2 差异基因火山图"
-parser <- ArgumentParser(description = what_plot, add_help = TRUE)
-parser$add_argument("--DEGs", dest = "DEGs", help = "csv 格式 DESeq2 差异基因分析结果", required = TRUE)
-parser$add_argument("--output_dir", dest = "OUTDIR", help = "火山图保存目录。默认：当前目录", default = ".")
-parser$add_argument("--prefix", dest = "PREFIX", help = "输出文件名前缀。默认：NoName", default = "NoName")
-parser$add_argument("--annot_list", dest = "ANNOT_LIST", help = "每个基因一行的注释基因列表文件", 
-                    default = NULL)
-parser$add_argument("--annot_gene", dest = "ANNOT_GENE", help = "注释基因，多个基因用逗号 \",\" 分隔", 
-                    default = NULL)
-parser$add_argument("--label_column", dest = "LABEL_COLUMN", help = "注释基因列名，默认 hgnc_symbol", 
-                    default = "hgnc_symbol")
-parser$add_argument("--plot_title", dest = "TITLE", help = "火山图标题。默认：Differential Expression Genes", 
-                    default = "Differential Expression Genes")
-parser$add_argument("--pvalue_cutoff", dest = "PVAL", help = "差异基因 P 值阈值。默认：0.05", default = 0.05)
-parser$add_argument("--log2FC_cutoff", dest = "LOG2FC", help = "差异基因 log2 差异倍数绝对值阈值。默认：1", default = 1)
-parser$add_argument("--max_y", dest = "MAXY", help = "Y 轴最大值，超过的点将被调整到此值。默认：12", default = 12)
-parser$add_argument("--max_x", dest = "MAXX", help = "X 轴绝对值最大值，超过的点将被调整到此值。默认：5", default = 5)
-parser$add_argument("--color1", dest = "COL1", help = "差异基因的颜色。默认：#f56B949", default = "#56B949")
-parser$add_argument("--color2", dest = "COL2", help = "P 值显著但差异倍数小基因的颜色。默认：#F0A32F", default = "#F0A32F")
-parser$add_argument("--color3", dest = "COL3", help = "非差异基因的颜色。默认：#30499B", default = "#30499B")
-parser$add_argument("--color4", dest = "COL4", help = "注释基因的颜色。默认：#EE4035", default = "#EE4035")
-parser$add_argument("--plot_width", dest = "PLOT_WIDTH", help = "图片宽度（mm），默认：180", default = 180)
-parser$add_argument("--plot_height", dest = "PLOT_HEIGHT", help = "图片高度（mm），默认：200", default = 200)
+x <- "DESeq2 volcano plot"
+parser <- ArgumentParser(description = x, add_help = TRUE)
+parser$add_argument("--DEGs", dest = "DEGs", required = TRUE, 
+                    help = "DESeq2 DEGs results in CSV format")
+parser$add_argument("--output_dir", dest = "OUTDIR", default = "./", 
+                    help = "output directory, default: ./")
+parser$add_argument("--prefix", dest = "PREFIX", default = "NoName", 
+                    help = "output prefix, default: NoName")
+parser$add_argument("--annot_list", dest = "ANNOT_LIST", default = NULL, 
+                    help = "annotate gene list file, one gene per line")
+parser$add_argument("--annot_gene", dest = "ANNOT_GENE", default = NULL, 
+                    help = "annotate gene list separated by comma")
+parser$add_argument("--label_column", dest = "LABEL_COLUMN", default = "hgnc_symbol", 
+                    help = "gene ID column of annotation, default: hgnc_symbol")
+parser$add_argument("--plot_title", dest = "TITLE", default = "Differential Expression Genes", 
+                    help = "plot title, default: Differential Expression Genes")
+parser$add_argument("--pvalue_cutoff", dest = "PVAL", default = 0.05, 
+                    help = "p-value cutoff, default: 0.05")
+parser$add_argument("--log2FC_cutoff", dest = "LOG2FC", default = 1, 
+                    help = "abs(log2FC) cutoff, default: 1")
+parser$add_argument("--max_y", dest = "MAXY", default = 12, 
+                  help = "max y-axis, default: 12")
+parser$add_argument("--max_x", dest = "MAXX", default = 5, 
+                    help = "max x-axis, default: 5")
+parser$add_argument("--color1", dest = "COL1", default = "#56B949", 
+                    help = "color of filtered DEGs, default: #f56B949")
+parser$add_argument("--color2", dest = "COL2", default = "#F0A32F", 
+                    help = "color of significant DEGs, default: #F0A32F")
+parser$add_argument("--color3", dest = "COL3", default = "#30499B", 
+                    help = "color of non DEGs, default: #30499B")
+parser$add_argument("--color4", dest = "COL4", default = "#EE4035", 
+                    help = "annotation color, default: #EE4035")
+parser$add_argument("--plot_width", dest = "PLOT_WIDTH", default = 180, 
+                    help = "plot width (mm), default: 180")
+parser$add_argument("--plot_height", dest = "PLOT_HEIGHT", default = 200, 
+                    help = "plot height (mm), default: 200")
 
 
 argvs <- parser$parse_args()
@@ -52,10 +63,10 @@ color3 <- argvs$COL3
 color4 <- argvs$COL4
 plot_width <- as.integer(argvs$PLOT_WIDTH)
 plot_height <- as.integer(argvs$PLOT_HEIGHT)
-}
 
-# 函数
-{
+
+
+
 # 被压缩的点用三角形，以示区别
 shape_value <- function(p_value, log2_foldchange, max_x, max_y) {
   if (- log10(p_value) <= max_y & (log2_foldchange >= - max_x & log2_foldchange <= max_x)) {
@@ -111,7 +122,7 @@ annot_plot <- function(raw_plot_data, gene_list, raw_plot) {
       geom_point(data = label_data, 
                  mapping = aes(x, y), color = color4)
   } else {
-    cat("画图数据没有要注释基因，注意检查数据\n")
+    log_msg("WARN", "no annotation genes in DEGs data")
     annot_plot <- raw_plot
   }
   return(annot_plot)
@@ -122,26 +133,17 @@ degs_summary <- function(x) {
     nrow()
   down_num <- filter(x, padj < pval_cutoff, log2FoldChange < 0) %>% 
     nrow()
-  cat("\n差异基因总结：\n")
-  cat("P 值显著上调基因数 ")
-  cat(up_num)
-  cat("\n")
-  cat("P 值显著下调基因数 ")
-  cat(down_num)
-  cat("\n")
+  log_msg("INFO", "up regulate significant DEGs number:", up_num)
+  log_msg("INFO", "down regulate significant DEGs number:", down_num)
   
   up_num <- filter(x, padj < pval_cutoff, log2FoldChange >= fc_cutoff) %>% 
     nrow()
   down_num <- filter(x, padj < pval_cutoff, log2FoldChange <= (- fc_cutoff)) %>% 
     nrow()
-  cat("P 值和差异倍数符合条件上调基因数 ")
-  cat(up_num)
-  cat("\n")
-  cat("P 值和差异倍数符合条件下调基因数 ")
-  cat(down_num)
-  cat("\n\n")
+  log_msg("INFO", "up regulate filtered DEGs number:", up_num)
+  log_msg("INFO", "down regulate filtered DEGs number:", down_num)
 }
-}
+
 
 plot_data <- read_csv(input_path) %>% 
   filter(!is.na(padj)) %>% 
@@ -167,7 +169,7 @@ volcano_plot <- ggplot(plot_data, aes(x, y)) +
 # 注释
 if (!is.null(annot_list_pm)) {
   gene_list_path <- file.path(annot_list_pm)
-  stopifnot("基因列表路径错误" = file.exists(gene_list_path))
+  check_path(gene_list_path, TRUE, FALSE)
   genes <- scan(gene_list, what = character(), sep = "\n")
   vplot <- annot_plot(plot_data, genes, volcano_plot)
 } else if (!is.null(annot_gene_pm)) {

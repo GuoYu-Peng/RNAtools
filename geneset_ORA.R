@@ -50,30 +50,29 @@ for (each_target in target_list) {
 }
 # check gene sets
 if (length(keep_target) == 0) {
-  writeLines("\n[ERROR] all gene sets illegal:")
+  log_msg("ERROR", "all gene sets illegal:")
   print(rm_target)
   quit(status = 1)
 }
 if (length(rm_target) != 0) {
-  writeLines("\n[WARN] unknown gene sets:")
+  log_msg("WARN", "unknown gene sets:")
   print(rm_target)
 }
-writeLines("\n[INFO] gene set list:")
+log_msg("INFO", "gene set list:")
 print(keep_target)
 
 check_DEGs <- function(x) {
   n <- nrow(x)
   if (n == 0) {
-    writeLines("\n[ERROR] no DEGs under \"padj < 0.05 &abs(log2FoldChange) >= 1\" condiction")
+    log_msg("ERROR", "no DEGs under \"padj < 0.05 &abs(log2FoldChange) >= 1\" condiction")
     quit(status = 1)
   } else {
-    t <- paste("\n[INFO] DEGs after filter: ", n, sep = "")
-    writeLines(t)
+    log_msg("INFO", "DEGs after filter:", n)
   }
 }
 
 run_KEGG <- function(entrez_list, entrez_bg, output_dir, ...) {
-  writeLines("\n[INFO] testing KEGG...")
+  log_msg("INFO", "testing KEGG...")
   csv_path <- make_path(dest_dir = output_dir, suffix = "csv", ...)
   rds_path <- make_path(dest_dir = output_dir, suffix = "rds", ...)
   
@@ -81,7 +80,7 @@ run_KEGG <- function(entrez_list, entrez_bg, output_dir, ...) {
                          universe = entrez_bg, minGSSize = 15, maxGSSize = 300, pvalueCutoff = 0.1)
   
   if (is.null(ora_kegg)) {
-    writeLines("\n[WARN] no KEGG enrichment results")
+    log_msg("WARN", "no KEGG enrichment results")
   } else {
     kegg_tb <- as_tibble(ora_kegg@result)
     write_csv(kegg_tb, csv_path)
@@ -90,8 +89,7 @@ run_KEGG <- function(entrez_list, entrez_bg, output_dir, ...) {
 }
 
 run_GO <- function(entrez_list, entrez_bg, output_dir, ont = "BP", ...) {
-  info_msg <- paste("\n[INFO] testing GO", ont, "...", sep = "")
-  writeLines(info_msg)
+  log_msg("INFO", "testing GO", ont, "...")
   csv_path <- make_path(dest_dir = output_dir, suffix = "csv", ...)
   rds_path <- make_path(dest_dir = output_dir, suffix = "rds", ...)
   
@@ -100,7 +98,7 @@ run_GO <- function(entrez_list, entrez_bg, output_dir, ont = "BP", ...) {
                       readable = TRUE, pvalueCutoff = 0.1)
   
   if (is.null(ora_go1)) {
-    writeLines("\n[WARN] no GO enrichment results")
+    log_msg("WARN", "no GO enrichment results")
   } else {
     ora_go2 <- clusterProfiler::simplify(ora_go1)
     saveRDS(ora_go2, rds_path)
@@ -133,8 +131,7 @@ if (genome == "GRCh38") {
     unique() %>% 
     as.character()    
 } else {
-  writeLines("\n[ERROR] unsupported genome:")
-  print(genome)
+  log_msg("ERROR", "unsupported genome:", genome)
   quit(status = 1)
 }
 
@@ -148,7 +145,7 @@ for (each_target in keep_target) {
   } else if (each_target == "GOCC") {
     run_GO(DEGs_list, bg_list, output_dir, ont = "CC", prefix, "ORA", "GOCC")
   } else {
-    writeLines("\n[WARN] unknown gene set:")
+    log_msg("WARN", "unknown gene set:")
     print(each_target)
   }
 }
