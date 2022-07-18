@@ -18,23 +18,23 @@ short_id <- function(x) {
 
 x <- "run DESeq2"
 parser <- ArgumentParser(description = x, add_help = TRUE)
-parser$add_argument("--project", dest = "PROJECT", default = ".", 
-                    help = "project directory where to save results. Default: current working directory")
+parser$add_argument("--output_dir", dest = "OUTDIR", default = "./", 
+                    help = "output directory, Default: ./")
 parser$add_argument("--salmon", dest = "SALMON", default = "salmon", 
                     help = "salmon results directory. Default: ./salmon")
 parser$add_argument("--group", dest = "GROUP", default = "sample_group.csv", 
-                    help = "group information in csv format, first column is sample name, second column is group. Default: ./sample_group.csv")
+                    help = "group information in CSV format, first column is sample name, second column is group. Default: ./sample_group.csv")
 parser$add_argument("--control", dest = "CONTROL", default = NULL, 
                     help = "specific which group is control.")
 parser$add_argument("--counts", dest = "COUNTS", default = NULL, 
-                    help = "read counts matrix in csv format. This will overwrite --salmon")
+                    help = "read counts matrix in CSV format. This will overwrite --salmon")
 parser$add_argument("--genome", dest = "GENOME", default = "GRCh38", 
                     help = "genome, GRCh38 or GRCm39. Default: GRCh38")
 parser$add_argument("--tx2gene", dest = "TX2GENE", required = TRUE, 
                     help = "mapping of transcripts and genes in csv format, first column is transcript, second column is gene.  Create by MakeTx2GeneFromGTF.R from GTF/GFF3")
 argvs <- parser$parse_args()
 
-project_dir <- file.path(argvs$PROJECT)
+output_dir <- file.path(argvs$OUTDIR)
 salmon_dir <- file.path(argvs$SALMON)
 group_path <- file.path(argvs$GROUP)
 tx2gene_path <- file.path(argvs$TX2GENE)
@@ -42,8 +42,9 @@ ctr_setting <- argvs$CONTROL
 genome <- argvs$GENOME
 
 check_path(group_path, quit = TRUE)
-check_path(project_dir, mkdir = TRUE)
+check_path(output_dir, mkdir = TRUE)
 
+# no header
 group_info <- read.csv(group_path, header = TRUE, stringsAsFactors = TRUE)
 colnames(group_info) <- c("sample", "treatment")
 if (is.null(ctr_setting)) {
@@ -55,34 +56,24 @@ if (is.null(ctr_setting)) {
   group_info$treatment <- relevel(group_info$treatment, ref = ctr_group)
   test_group <- levels(group_info$treatment)[2]
 }
-writeLines("\n[INFO] group information:")
-print(group_info)
-writeLines("\n[INFO] control group:")
-print(ctr_group)
-
 
 x <- table(group_info$treatment)
 if (any(x < 3)) {
-  writeLines("[ERROR] DESeq2 requires at least 3 repeat samples of each group.")
+  log_msg("ERROR", "DESeq2 requires at least 3 repeat samples for each group.")
   quit(status = 1)
 }
 
 count_input <- argvs$COUNTS
 if (is.null(count_input)) {
-  stopifnot("salmon directory doesn't exist!" = file.exists(salmon_dir))
+  check_path(salmon_dir, quit = TRUE)
   salmon_paths <- file.path(salmon_dir, group_info$sample, "quant.sf")
   names(salmon_paths) <- group_info$sample
-  writeLines("\n[INFO] salmon quant paths:")
-  print(salmon_paths)
   
   for (each_path in salmon_paths) {
     check_path(each_path, quit = TRUE)
   }
   check_path(tx2gene_path, quit = TRUE)
-  
   tx_gene <- read.csv(tx2gene_path, header = TRUE, quote = "", stringsAsFactors = FALSE)
-  writeLines("\n[INFO] tx2gene matrix:")
-  print(head(tx_gene))
   
   txp <- tximport(salmon_paths, type = "salmon", tx2gene = tx_gene)
   tpm <- txp$abundance
@@ -102,17 +93,14 @@ keep_genes <- rowSums(counts(dds)) > 0
 dds <- dds[keep_genes,]
 dds <- DESeq(dds)
 
-exprs_dir <- file.path(project_dir, "expression")
-DEGs_dir <- file.path(project_dir, "DEGs")
-check_path(exprs_dir, quit = FALSE, mkdir = TRUE)
-check_path(DEGs_dir, quit = FALSE, mkdir = TRUE)
-exprs_path <- file.path(exprs_dir, c("read_counts.csv", "normalized_counts.csv", 
-                                      "RLog_blind.csv", "RLog.csv"))
-names(exprs_path) <- c("read_counts", "normalized_counts", "RLog_blind", "RLog")
-ma_path <- file.path(exprs_dir, "MAplot.pdf")
-DEGs_path <- file.path(DEGs_dir, c("DEGs_raw_all.csv", "DEGs_shrink_all.csv", 
-                                   "DEGs_shrink_filter.csv"))
-names(DEGs_path) <- c("DEGs_raw_all", "DEGs_shrink_all", "DEGs_shrink_filter")
+# output paths
+output_paths <- file.path(output_dir, c("read_counts.csv", "normalized_counts.csv", 
+                                      "RLog_blind.csv", "RLog.csv", "DEGs_raw_all.csv", 
+                                      "DEGs_shrink_all.csv", "DEGs_shrink_filter.csv", 
+                                      "MAplot.pdf"))
+names(output_paths) <- c("read_counts", "normalized_counts", "RLog_blind", "RLog", 
+                         "DEGs_raw_all", "DEGs_shrink_all", "DEGs_shrink_filter", 
+                         "MAplot")
 
 gene_list <- rownames(dds) %>% 
   sapply(short_id, USE.NAMES = FALSE)
@@ -123,8 +111,6 @@ if (genome == "GRCh38") {
     as_tibble() %>% 
     arrange(entrezgene_id, desc(hgnc_symbol)) %>% 
     distinct(ensembl_gene_id, .keep_all = TRUE)
-  writeLines("\n[INFO] gene id mapping:")
-  glimpse(id_map)
   
   if (is.null(count_input)) {
     tpm <- as_tibble(tpm, rownames = "gene_id") %>% 
@@ -133,7 +119,7 @@ if (genome == "GRCh38") {
       select(- ensembl_gene_version) %>% 
       left_join(id_map, by = "ensembl_gene_id") %>% 
       select(ensembl_gene_id, entrezgene_id, hgnc_symbol, everything())
-    tpm_path <- file.path(exprs_dir, "TPM.csv")
+    tpm_path <- file.path(output_dir, "TPM.csv")
     write_csv(tpm, tpm_path)
   }
   
@@ -144,7 +130,7 @@ if (genome == "GRCh38") {
     select(- ensembl_gene_version) %>% 
     left_join(id_map, by = "ensembl_gene_id") %>% 
     select(ensembl_gene_id, entrezgene_id, hgnc_symbol, everything())
-  write_csv(raw_counts, exprs_path["read_counts"])
+  write_csv(raw_counts, output_paths["read_counts"])
   nor_counts <- counts(dds, normalized = TRUE) %>% 
     as_tibble(rownames = "gene_id") %>% 
     separate(col = "gene_id", into = c("ensembl_gene_id", "ensembl_gene_version"), 
@@ -152,7 +138,7 @@ if (genome == "GRCh38") {
     select(- ensembl_gene_version) %>% 
     left_join(id_map, by = "ensembl_gene_id") %>% 
     select(ensembl_gene_id, entrezgene_id, hgnc_symbol, everything())
-  write_csv(nor_counts, exprs_path["normalized_counts"])
+  write_csv(nor_counts, output_paths["normalized_counts"])
   rlog1 <- rlog(dds, blind = TRUE) %>% 
     assay() %>% 
     as_tibble(rownames = "gene_id") %>% 
@@ -161,7 +147,7 @@ if (genome == "GRCh38") {
     select(- ensembl_gene_version) %>% 
     left_join(id_map, by = "ensembl_gene_id") %>% 
     select(ensembl_gene_id, entrezgene_id, hgnc_symbol, everything())
-  write_csv(rlog1, exprs_path["RLog_blind"])
+  write_csv(rlog1, output_paths["RLog_blind"])
   rlog2 <- rlog(dds, blind = FALSE) %>% 
     assay() %>% 
     as_tibble(rownames = "gene_id") %>% 
@@ -170,12 +156,13 @@ if (genome == "GRCh38") {
     select(- ensembl_gene_version) %>% 
     left_join(id_map, by = "ensembl_gene_id") %>% 
     select(ensembl_gene_id, entrezgene_id, hgnc_symbol, everything())
-  write_csv(rlog2, exprs_path["RLog"])
+  write_csv(rlog2, output_paths["RLog"])
   
   raw_res <- results(dds, contrast = c("treatment", test_group, ctr_group))
   snk_res <- lfcShrink(dds, coef = str_glue("treatment_{test_group}_vs_{ctr_group}"), 
                        type = "apeglm", res = raw_res)
-  pdf(ma_path, width = 9)
+  
+  pdf(output_paths["MAplot"], width = 9)
   plotMA(raw_res, ylim = c(-5, 5), main = "LFC raw")
   plotMA(snk_res, ylim = c(-5, 5), main = "LFC shrink")
   dev.off()
@@ -186,14 +173,14 @@ if (genome == "GRCh38") {
     select(- ensembl_gene_version) %>% 
     left_join(id_map, by = "ensembl_gene_id") %>% 
     select(ensembl_gene_id, entrezgene_id, hgnc_symbol, everything())
-  write_csv(raw_degs, DEGs_path["DEGs_raw_all"])
+  write_csv(raw_degs, output_paths["DEGs_raw_all"])
   snk_degs1 <- as_tibble(snk_res, rownames = "gene_id") %>% 
     separate(col = "gene_id", into = c("ensembl_gene_id", "ensembl_gene_version"), 
                                        extra = "drop", fill = "right", sep = "\\.") %>% 
     select(- ensembl_gene_version) %>% 
     left_join(id_map, by = "ensembl_gene_id") %>% 
     select(ensembl_gene_id, entrezgene_id, hgnc_symbol, everything())
-  write_csv(snk_degs1, DEGs_path["DEGs_shrink_all"])
+  write_csv(snk_degs1, output_paths["DEGs_shrink_all"])
   snk_degs2 <- as_tibble(snk_res, rownames = "gene_id") %>% 
     separate(col = "gene_id", into = c("ensembl_gene_id", "ensembl_gene_version"), 
                                        extra = "drop", fill = "right", sep = "\\.") %>% 
@@ -201,7 +188,7 @@ if (genome == "GRCh38") {
     left_join(id_map, by = "ensembl_gene_id") %>% 
     select(ensembl_gene_id, entrezgene_id, hgnc_symbol, everything()) %>% 
     filter(!is.na(padj), padj < 0.05, abs(log2FoldChange) >= 1)
-  write_csv(snk_degs2, DEGs_path["DEGs_shrink_filter"])
+  write_csv(snk_degs2, output_paths["DEGs_shrink_filter"])
   
 } else if (genome == "GRCm39") {
   ensembl <- useMart(biomart = "ENSEMBL_MART_ENSEMBL", dataset = "mmusculus_gene_ensembl")
@@ -229,8 +216,6 @@ if (genome == "GRCh38") {
                   "hsapiens_homolog_hgnc_symbol" = hgnc_symbol)
   id_map <- left_join(id_map1, id_map2, by = "ensembl_gene_id") %>% 
     left_join(id_map3, by = "hsapiens_homolog_ensembl_gene")
-  writeLines("\n[INFO] Gene id mapping:")
-  glimpse(id_map)
   
   if (is.null(count_input)) {
     tpm <- as_tibble(tpm, rownames = "gene_id") %>% 
@@ -240,7 +225,7 @@ if (genome == "GRCh38") {
       left_join(id_map, by = "ensembl_gene_id") %>% 
       select(ensembl_gene_id, mgi_id, mgi_symbol, entrezgene_id, hsapiens_homolog_ensembl_gene, 
              hsapiens_homolog_entrez_gene, hsapiens_homolog_hgnc_symbol, everything())
-    tpm_path <- file.path(exprs_dir, "TPM.csv")
+    tpm_path <- file.path(output_dir, "TPM.csv")
     write_csv(tpm, tpm_path)
   }
   
@@ -252,7 +237,7 @@ if (genome == "GRCh38") {
     left_join(id_map, by = "ensembl_gene_id") %>% 
     select(ensembl_gene_id, mgi_id, mgi_symbol, entrezgene_id, hsapiens_homolog_ensembl_gene, 
            hsapiens_homolog_entrez_gene, hsapiens_homolog_hgnc_symbol, everything())
-  write_csv(raw_counts, exprs_path["read_counts"])
+  write_csv(raw_counts, output_paths["read_counts"])
   nor_counts <- counts(dds, normalized = TRUE) %>% 
     as_tibble(rownames = "gene_id") %>% 
     separate(col = "gene_id", into = c("ensembl_gene_id", "ensembl_gene_version"), 
@@ -261,7 +246,7 @@ if (genome == "GRCh38") {
     left_join(id_map, by = "ensembl_gene_id") %>% 
     select(ensembl_gene_id, mgi_id, mgi_symbol, entrezgene_id, hsapiens_homolog_ensembl_gene, 
            hsapiens_homolog_entrez_gene, hsapiens_homolog_hgnc_symbol, everything())
-  write_csv(nor_counts, exprs_path["normalized_counts"])
+  write_csv(nor_counts, output_paths["normalized_counts"])
   rlog1 <- rlog(dds, blind = TRUE) %>% 
     assay() %>% 
     as_tibble(rownames = "gene_id") %>% 
@@ -271,7 +256,7 @@ if (genome == "GRCh38") {
     left_join(id_map, by = "ensembl_gene_id") %>% 
     select(ensembl_gene_id, mgi_id, mgi_symbol, entrezgene_id, hsapiens_homolog_ensembl_gene, 
            hsapiens_homolog_entrez_gene, hsapiens_homolog_hgnc_symbol, everything())
-  write_csv(rlog1, exprs_path["RLog_blind"])
+  write_csv(rlog1, output_paths["RLog_blind"])
   rlog2 <- rlog(dds, blind = FALSE) %>% 
     assay() %>% 
     as_tibble(rownames = "gene_id") %>% 
@@ -281,12 +266,12 @@ if (genome == "GRCh38") {
     left_join(id_map, by = "ensembl_gene_id") %>% 
     select(ensembl_gene_id, mgi_id, mgi_symbol, entrezgene_id, hsapiens_homolog_ensembl_gene, 
            hsapiens_homolog_entrez_gene, hsapiens_homolog_hgnc_symbol, everything())
-  write_csv(rlog2, exprs_path["RLog"])
+  write_csv(rlog2, output_paths["RLog"])
   
   raw_res <- results(dds, contrast = c("treatment", test_group, ctr_group))
   snk_res <- lfcShrink(dds, coef = str_glue("treatment_{test_group}_vs_{ctr_group}"), 
                        type = "apeglm", res = raw_res)
-  pdf(ma_path, width = 9)
+  pdf(output_paths["MAplot"], width = 9)
   plotMA(raw_res, ylim = c(-5, 5), main = "LFC raw")
   plotMA(snk_res, ylim = c(-5, 5), main = "LFC shrink")
   dev.off()
@@ -298,7 +283,7 @@ if (genome == "GRCh38") {
     left_join(id_map, by = "ensembl_gene_id") %>% 
     select(ensembl_gene_id, mgi_id, mgi_symbol, entrezgene_id, hsapiens_homolog_ensembl_gene, 
            hsapiens_homolog_entrez_gene, hsapiens_homolog_hgnc_symbol, everything())
-  write_csv(raw_degs, DEGs_path["DEGs_raw_all"])
+  write_csv(raw_degs, output_paths["DEGs_raw_all"])
   snk_degs1 <- as_tibble(snk_res, rownames = "gene_id") %>%
     separate(col = "gene_id", into = c("ensembl_gene_id", "ensembl_gene_version"), 
                                        extra = "drop", fill = "right", sep = "\\.") %>% 
@@ -306,7 +291,7 @@ if (genome == "GRCh38") {
     left_join(id_map, by = "ensembl_gene_id") %>% 
     select(ensembl_gene_id, mgi_id, mgi_symbol, entrezgene_id, hsapiens_homolog_ensembl_gene, 
            hsapiens_homolog_entrez_gene, hsapiens_homolog_hgnc_symbol, everything())
-  write_csv(snk_degs1, DEGs_path["DEGs_shrink_all"])
+  write_csv(snk_degs1, output_paths["DEGs_shrink_all"])
   snk_degs2 <- as_tibble(snk_res, rownames = "gene_id") %>%
     separate(col = "gene_id", into = c("ensembl_gene_id", "ensembl_gene_version"), 
                                        extra = "drop", fill = "right", sep = "\\.") %>% 
@@ -315,8 +300,8 @@ if (genome == "GRCh38") {
     select(ensembl_gene_id, mgi_id, mgi_symbol, entrezgene_id, hsapiens_homolog_ensembl_gene, 
            hsapiens_homolog_entrez_gene, hsapiens_homolog_hgnc_symbol, everything()) %>% 
     filter(!is.na(padj), padj < 0.05, abs(log2FoldChange) >= 1)
-  write_csv(snk_degs2, DEGs_path["DEGs_shrink_filter"])
+  write_csv(snk_degs2, output_paths["DEGs_shrink_filter"])
 } else {
-  writeLines("\n[ERROR] genome must be GRCh38 or GRCm39!")
+  log_msg("ERROR", "genome must be GRCh38 or GRCm39!")
   quit(status = 1)
 }
